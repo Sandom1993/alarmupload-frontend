@@ -12,13 +12,24 @@ export const ALARM_TYPE = [
  * @VALID_TYPE
  */
 export const HANDLE_TYPE = [
-  { value: '0', label: '全部' },
-  { value: '1', label: '已处置' },
-  { value: '2', label: '未处置' }
+  { value: null, label: '全部' },
+  { value: 1, label: '已处置' },
+  { value: 0, label: '未处置' }
 ]
 
 export const ALLBY_TYPE = [
   { id: 12, messageContent: '按规定扣除违安全违约金', messageType: 0 },
   { id: 11, messageContent: '已进行下车学习', messageType: 0 },
   { id: 10, messageContent: '已进行批评教育', messageType: 0 }
+]
+
+/**
+ * 报警级别
+ * @ALARM_LEVEL
+ */
+export const ALARM_LEVEL = [
+  { value: 'l', label: '一级', color: '#2080FC' },
+  { value: 'm', label: '二级', color: '#FD9511' },
+  { value: 'h', label: '三级', color: '#FA3239' },
+  { value: 'w', label: '预警', color: '#a3a3a3' }
 ]

@@ -18,7 +18,7 @@ export default [
     // 警情处置
     name: 'alarmHandle',
     path: '/alarmHandle',
-    menuCode: '001',
+    menuCode: '002',
     component: 'alarmHandle/AlarmHandle'
   }
 ]
