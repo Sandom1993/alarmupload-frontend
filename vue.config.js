@@ -30,7 +30,31 @@ module.exports = {
         }
       })
     };
-    config.plugin('html').tap(args => {
+
+    if (process.env.NODE_ENV === 'production') {
+      config.plugin('html').tap(args => {
+        args[0].meta = {
+          _csrf: {
+            name: '_csrf',
+            content: '${_csrf.token}' // eslint-disable-line
+          }
+        }
+        return args
+      })
+    } else {
+      // mutate for development...
+      console.log('development building...')
+      config.plugin('html').tap(args => {
+        args[0].meta = {
+          _csrf: {
+            name: '_csrf',
+            content: '17099c98-a35a-4074-9501-e19a1446c67e' // eslint-disable-line
+          }
+        }
+        return args
+      })
+    }
+   /* config.plugin('html').tap(args => {
       const meta = {
         _csrf: {
           name: '_csrf',
@@ -39,7 +63,7 @@ module.exports = {
       }
       args[0].meta = meta
       return args
-    })
+    })*/
     // config.module
     //   .rule('svg')
     //   .exclude
@@ -66,12 +90,26 @@ module.exports = {
     // },
     proxy: {
       '^/api/': {
-        target: 'http://localhost:8060',
-        changeOrigin: true
+        //target: 'http://10.196.44.13:17200',
+        target: 'https://183.230.82.16', // 测试地址
+        changeOrigin: true,
+        onProxyReq(proxyReq, req, res) {
+          proxyReq.setHeader(
+            'Cookie',
+            'JSESSIONID=pLvfGORPkgNLfoV3wyl_t2YXL2jgnaX18H4Gibdk; portal_locale_cookie=zh-cn; csrfToken=r0UonvyeDERj_hkbqKqYR8kw; CASTGC=TGT-68-YS9qatWrQeVMKGrbcvnHzz0pHovVqb70mxGmOz3SlhlHGgnUd7-cas; portal_sess=XSpoo4TuA3dmV0X1YBx70TUKTi8cb5non0PiGJIbPDg90khhafnBwTL6kKPXjpri'
+          )
+        }
       },
       '/alarmupload-web': {
-        target: 'http://10.196.44.13:17100',
-        changeOrigin: true
+        //target: 'http://10.196.44.13:17200',
+        target: 'https://183.230.82.16', // 测试地址
+        changeOrigin: true,
+        onProxyReq(proxyReq, req, res) {
+          proxyReq.setHeader(
+            'Cookie',
+            'JSESSIONID=V7B4nKVt_mFqsd3eG3NoZYaPd98IJQHcmHzRleNw; portal_locale_cookie=zh-cn; csrfToken=r0UonvyeDERj_hkbqKqYR8kw; CASTGC=TGT-70-X5G696JwPZs7iJzfd4fgtjUqMOE6Dco4uUqAkp7kirnpXV3ovG-cas; portal_sess=qr2NS1gfV6AkIhGBOhpyOVnO4Jb7NfjUf5Q5P5fbLsnW5QmNTJ-Ft3jlGRHP4Wn3'
+          )
+        }
       }
     }
   }

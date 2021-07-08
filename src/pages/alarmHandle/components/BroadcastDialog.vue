@@ -24,7 +24,7 @@
           </div>
           <div class="template-word">
             <div class="template-word-head">
-              <span>短信模板</span>
+              <span>内容模板</span>
               <span style="float:right;">
                 <el-button
                   type="iconButton"
@@ -60,62 +60,19 @@
           </div>
         </div>
       </div>
-      <div class="message-head">下发方式：</div>
+      <div class="message-head">上传附件：</div>
       <div class="sent-type">
-        <el-checkbox v-model="TTSChecked">
-          终端TTS播读
-        </el-checkbox>
-        <el-checkbox v-model="inCarChecked">
-          终端显示器显示
-        </el-checkbox>
-      </div>
-      <div v-if="isNeedBroadcastingType" class="broadcast-type">
-        <el-form
-          ref="form2"
-          :model="form2"
-          :rules="rules2"
-          label-width="80px"
-          message-position="bottom"
-          label-position="left"
-        >
-          <el-form-item label="播报类型" prop="type">
-            <el-radio v-model="form2.type" class="radio" :label="0">
-              实时播报
-            </el-radio>
-            <el-radio v-model="form2.type" class="radio" :label="1">
-              定时播报
-            </el-radio>
-            <el-radio v-model="form2.type" class="radio" :label="2">
-              上线播报
-            </el-radio>
-          </el-form-item>
-          <el-form-item
-            v-show="form2.type === 1"
-            label="播报频率"
-            prop="frequency"
-          >
-            <el-input-number
-              v-model="form2.frequency"
-              style="margin-right:8px"
-              :min="5"
-              :max="1440"
-              :reset-default="true"
-            ></el-input-number>
-            分钟/次
-          </el-form-item>
-          <el-form-item
-            v-show="form2.type === 1"
-            label="截止时间"
-            prop="endTime"
-          >
-            <el-date-picker
-              v-model="form2.endTime"
-              type="datetime"
-              :picker-options="pickerOptions"
-              placeholder="请选择截止时间"
-            ></el-date-picker>
-          </el-form-item>
-        </el-form>
+        <el-upload
+          class="upload-demo"
+          action="/alarmupload-web/feedback/uploadAttachment.do"
+          :on-preview="handlePreview"
+          :on-remove="handleRemove"
+          :before-upload="beforeUpload"
+          :on-success="handleSuccess"
+          :file-list="fileList">
+          <el-button type="default">点击上传</el-button>
+<!--          <div slot="tip" class="el-upload__tip">只能上传jpg/png文件，且不超过500kb</div>-->
+        </el-upload>
       </div>
     </div>
     <el-dialog
@@ -146,109 +103,45 @@
       </div>
     </el-dialog>
     <div class="btn-wrap">
-      <el-button type="primary" @click="sendMessage">
-        发送
+      <el-button type="primary" @click="alarmHandle">
+        确认
       </el-button>
       <el-button @click="dialogVisible = false">
         取消
       </el-button>
     </div>
-    <div class="message-head">
-      选择的{{ tableData.length }}辆车
-      <el-button
-        v-if="showReSend"
-        icon="h-icon-refresh_sm"
-        title="对下发失败的车辆重新发送"
-        @click="reSend"
-      />
-    </div>
-    <el-table
-      :data="tableData"
-      style="width: 100%"
-      max-height="160px"
-      class="broadcast-table"
-    >
-      <el-table-column type="index" label="序号" width="60"></el-table-column>
-      <el-table-column
-        prop="plateNo"
-        label="车牌"
-        width="150"
-      ></el-table-column>
-      <el-table-column label="下发结果" width="150">
-        <template slot-scope="scope">
-          <span v-if="scope.row.sendCode === '0'" class="send-success">
-            {{ scope.row.msg }}
-          </span>
-          <span
-            v-else-if="scope.row.sendCode !== undefined"
-            class="send-failure"
-            :title="scope.row.msg"
-          >
-            {{ scope.row.msg }}
-          </span>
-        </template>
-      </el-table-column>
-    </el-table>
   </el-dialog>
 </template>
 <script>
 
-// import { toTimezoneString, toTimeNormalString } from '@/components/util.js'
 import { toTimezoneString } from '@/components/util.js'
 import { ALLBY_TYPE } from '../config'
+import axios from 'axios'
+import { getToken } from '@/utils/common'
 
 export default {
   name: 'BroadcastDialog',
   props: {
+    tempRow: {
+      type: Object,
+      default: () => {}
+    },
     title: {
       type: String,
       default: '处置内容'
-    },
-    vehicleIndexCodes: {
-      type: Array,
-      default: () => []
-    },
-    vehicles: {
-      type: Array,
-      default: () => []
-    },
-    buttonLoading: {
-      type: Boolean,
-      default: false
-    },
-    isNeedBroadcastingType: {
-      type: Boolean,
-      default: false
-    },
-    alarms: {
-      type: Array,
-      default: () => []
     }
   },
   data () {
     return {
+      alarmHandleAttachment: '', // 附件完整地址
       ALLBY_TYPE,
       loading: false,
-      countNum: 0,
-      veList: [],
-      paramsVeArr: [],
-      errorArr: [],
-      successArr: [],
       dialogVisible: false, // 是否显示 该组件dialog
       innerVisible: false, // 是否显示 内部添加模板dialog
-      emergencyChecked: false,
-      TTSChecked: false, // 终端TTS播读 是否勾选
-      inCarChecked: false, // 终端显示器显示 是否勾选
-      outCarSelected: false,
-      textarea: '', // 下发消息内容
-      txtTemplate: [], // 短信模板
+      textarea: '', // 处置内容
+      txtTemplate: [], // 处置信息模板
       form: {
         updateTextarea: ''
-      },
-      form2: {
-        type: 0,
-        frequency: 5,
-        endTime: new Date()
       },
       pickerOptions: {
         disabledDate (time) {
@@ -261,44 +154,19 @@ export default {
       formRules: {
         // updateTextarea: [{ validator: validate.specialWord, trigger: 'blur' }]
       },
-      rules2: {},
       isAdd: true, // 添加模板还是修改模板
       isEditOff: true, // 是否禁止编辑  只有选中一个时可编辑  true 不可编辑  false 可编辑 而且和当前用户userId相同
       isDeleteOff: true, // 是否可删除 选中数量大于0 可删除
       selectedEvent: [], // 选择的模板
       checkedTemp: '', // 单选中的模板
-      tableData: []
+
+      // add by chenying 21.06.21
+      fileList: []
     }
   },
   computed: {
-    showReSend () {
-      return (
-        this.tableData &&
-        this.tableData.some(item => item.sendCode && item.sendCode !== '0')
-      )
-    }
   },
   watch: {
-    countNum (val) {
-      if (val === this.paramsVeArr.length) {
-        const error = [...this.errorArr].length
-        // eslint-disable-next-line no-unused-vars
-        const veArr = [...this.errorArr].map(item => {
-          return item.data
-        })
-        const success = [...this.successArr].length
-        if (error === 0 && success > 0) {
-          this.$message.success('下发成功')
-          this.loading = false
-        } else if (success === 0 && error > 0) {
-          this.$message.error('所有车辆下发失败')
-          this.loading = false
-        } else {
-          this.$message.error(`${error}个车辆下发失败`)
-          this.loading = false
-        }
-      }
-    },
     checkedTemp (n, o) {
       // 更改选中的模板
       // 如果有值，而且模板userId和当前userId一样，则可以删除和编辑
@@ -316,62 +184,45 @@ export default {
       }
       // 更新textarea的值
       let str = ''
-      const item = this.txtTemplate.find(i => i.id === n)
-      str = item.value
-      if (this.textarea) {
-        const prefix = this.textarea.match(/(\[车牌号\])*/)[0]
-        this.textarea = prefix + str
-      } else {
-        this.textarea = str
+      if (n) {
+        const item = this.txtTemplate.find(i => i.id === n)
+        str = item.value
       }
+      this.textarea = str
     }
   },
   methods: {
     openDialog () {
       this.dialogVisible = true
-      this.getTemp();
-    },
-    // showEditBtn(id) {
-    //   let str = '';
-    //   this.txtTemplate.forEach(item => {
-    //     const cItem = item;
-    //     cItem.showEdit = false;
-    //     if (id === item.id) {
-    //       cItem.showEdit = true;
-    //       str = item.value;
-    //     }
-    //   });
-    //   const item = this.txtTemplate.find(i => i.id === this.checkedTemp);
-    //   str = item.value;
-    //   if (this.textarea) {
-    //     const prefix = this.textarea.match(/(\[车牌号\])*/)[0];
-    //     this.textarea = prefix + str;
-    //   } else {
-    //     this.textarea = str;
-    //   }
-    // },
-    selectEvent () {
-      const event = this.txtTemplate.filter(item => item.checked)
-      this.selectedEvent = event
-      this.isEditOff = event.length !== 1
-      this.isDeleteOff = event.length === 0
+      this.getTemp()
     },
     // 获取模板文字
     getTemp () {
-      // const list = json.data.concat()
-      const list = ALLBY_TYPE
-      const arr = []
-      list.forEach(item => {
-        arr.push({
-          id: item.id,
-          value: item.messageContent,
-          checked: false,
-          userId: item.userId
+      axios
+        .get('/alarmupload-web/descTemplate/getAllByType.do', { type: '1' }, {
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRF-TOKEN': getToken()
+          }
+        }).then(res => {
+          const arr = []
+          if (res.data.code === '0' && res.data !== null) {
+            const list = res.data.data
+            list.forEach(item => {
+              arr.push({
+                id: item.id,
+                value: item.content,
+                checked: false,
+                userId: item.userId
+              })
+            })
+          }
+          this.txtTemplate = arr
+          // this.selectEvent();
+          this.checkedTemp = ''
         })
-      })
-      this.txtTemplate = arr
-      // this.selectEvent();
-      this.checkedTemp = ''
+      // const list = json.data.concat()
+      // const list1 = ALLBY_TYPE
     },
     addEvent () {
       this.isAdd = true
@@ -410,24 +261,32 @@ export default {
           message: '字符长度不得超过512'
         })
       }
-      // addTxTTemp({
-      //   messageType: 0,
-      //   messageContent: this.form.updateTextarea
-      // }).then(json => {
-      //   if (json.code === '0') {
-      //     this.$message({
-      //       type: 'success',
-      //       message: '添加成功'
-      //     })
-      //     this.innerVisible = false
-      //     this.getTemp()
-      //   } else {
-      //     this.$message({
-      //       type: 'error',
-      //       message: '添加模板出错'
-      //     })
-      //   }
-      // })
+      const param = {
+        type: 1,
+        content: this.form.updateTextarea
+      }
+      axios
+        .post('/alarmupload-web/descTemplate/add.do', param, {
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRF-TOKEN': getToken()
+          }
+        }).then(res => {
+          this.loading = false
+          if (res.data.code === '0') {
+            this.$message({
+              type: 'success',
+              message: '添加成功'
+            })
+            this.innerVisible = false
+            this.getTemp()
+          } else {
+            this.$message({
+              type: 'error',
+              message: '添加模板失败'
+            })
+          }
+        })
     },
     // 编辑模板文字
     editTemp () {
@@ -448,25 +307,32 @@ export default {
           message: '字符长度不得超过512'
         })
       }
-      // updateTxTTemp({
-      //   id: this.checkedTemp,
-      //   messageType: 0,
-      //   messageContent: this.form.updateTextarea
-      // }).then(json => {
-      //   if (json.code === '0') {
-      //     this.$message({
-      //       type: 'success',
-      //       message: '编辑成功'
-      //     })
-      //     this.innerVisible = false
-      //     this.getTemp()
-      //   } else {
-      //     this.$message({
-      //       type: 'error',
-      //       message: '修改模板出错'
-      //     })
-      //   }
-      // })
+      axios
+        .post('/alarmupload-web/descTemplate/update.do', {
+          type: '1',
+          id: this.checkedTemp,
+          content: this.form.updateTextarea
+        }, {
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRF-TOKEN': getToken()
+          }
+        }).then(res => {
+          this.loading = false
+          if (res.data.code === '0') {
+            this.$message({
+              type: 'success',
+              message: '编辑成功'
+            })
+            this.innerVisible = false
+            this.getTemp()
+          } else {
+            this.$message({
+              type: 'error',
+              message: '修改模板失败'
+            })
+          }
+        })
     },
     // 删除模板文字
     deleteTemp () {
@@ -475,32 +341,32 @@ export default {
         cancelButtonText: '取消',
         type: 'question'
       }).then(() => {
-        // deleteTxTTemp([this.checkedTemp]).then(json => {
-        //   if (json.code === '0') {
-        //     this.getTemp()
-        //     this.$message({
-        //       type: 'success',
-        //       message: '删除成功'
-        //     })
-        //   }
-        // })
+        axios
+          .post('/alarmupload-web/descTemplate/delete.do', [this.checkedTemp], {
+            headers: {
+              'X-Requested-With': 'XMLHttpRequest',
+              'X-CSRF-TOKEN': getToken()
+            }
+          }).then(res => {
+            this.loading = false
+            if (res.data.code === '0') {
+              this.$message({
+                type: 'success',
+                message: '删除成功'
+              })
+              this.innerVisible = false
+              this.getTemp()
+            } else {
+              this.$message({
+                type: 'error',
+                message: '删除模板失败'
+              })
+            }
+          })
       })
     },
-    reSend (vehicle, $index) {
-      const vehicles = this.tableData
-        .filter(item => item.sendCode !== '0')
-        .map(item => {
-          return {
-            plateNo: item.plateNo,
-            vehicleIndexCode: item.vehicleIndexCode
-          }
-        })
-      this.sendMessage({
-        vehicles: vehicles
-      })
-    },
-    // 下发消息
-    sendMessage (resendParam) {
+    // 下发处置
+    alarmHandle () {
       if (!this.textarea) {
         this.$message({
           type: 'warning',
@@ -508,226 +374,71 @@ export default {
         })
         return
       }
-
       if (this.textarea.length > 512) {
         this.$message({
           type: 'warning',
           message: '信息内容长度不能超过512个字符'
         })
-        return
+        return false
       }
-
-      const ASCII_UN_USE = []
-      // ASCII_UN_USE[0] = ['32'];// SPACE
-      ASCII_UN_USE[1] = ['33'] // !
-      ASCII_UN_USE[2] = ['34'] // "
-      ASCII_UN_USE[3] = ['35'] // #
-      ASCII_UN_USE[4] = ['36'] // $
-      ASCII_UN_USE[5] = ['37'] // %
-      // ASCII_UN_USE[6] = ['38'];// &
-      ASCII_UN_USE[7] = ['39'] // '
-      ASCII_UN_USE[8] = ['40'] // (
-      ASCII_UN_USE[9] = ['41'] // )
-      ASCII_UN_USE[10] = ['42'] // *
-      ASCII_UN_USE[11] = ['43'] // +
-      // ASCII_UN_USE[12] = ['44']; // ,
-      ASCII_UN_USE[13] = ['45'] // -
-      ASCII_UN_USE[14] = ['47'] // /
-      // ASCII_UN_USE[15] = ['58']; // :
-      // ASCII_UN_USE[16] = ['59']; // ;
-      ASCII_UN_USE[17] = ['60'] // <
-      ASCII_UN_USE[18] = ['61'] // =
-      ASCII_UN_USE[19] = ['62'] // >
-      ASCII_UN_USE[20] = ['63'] // ?
-      ASCII_UN_USE[21] = ['64'] // @
-      ASCII_UN_USE[22] = ['92'] // \
-      ASCII_UN_USE[23] = ['94'] // ^
-      ASCII_UN_USE[24] = ['95'] // _
-      ASCII_UN_USE[25] = ['123'] // {
-      ASCII_UN_USE[26] = ['124'] // |
-      ASCII_UN_USE[27] = ['125'] // }
-      ASCII_UN_USE[28] = ['126'] // ~
-
-      const arr11 = []
-      ASCII_UN_USE.forEach(item => {
-        const s = String.fromCharCode(parseInt(item, 10))
-        if (this.textarea.indexOf(s) > -1) {
-          arr11.push(s)
-        }
-      })
-      if (this.textarea.indexOf('“') > -1) {
-        arr11.push('“')
+      const alarmDealParam = {
+        alarmHandleDesc: this.textarea,
+        beginTime: toTimezoneString(this.tempRow.beginTime),
+        eventId: this.tempRow.eventId,
+        eventType: this.tempRow.eventType,
+        alarmHandleAttachment: this.alarmHandleAttachment
       }
-      if (this.textarea.indexOf('”') > -1) {
-        arr11.push('”')
-      }
-      if (this.textarea.indexOf(' ') > -1) {
-        arr11.push('空格')
-      }
-      if (arr11.length > 0) {
+      axios
+        .post('/alarmupload-web/feedback/alarmHandle.do', alarmDealParam, {
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRF-TOKEN': getToken()
+          }
+        }).then(res => {
+          console.log(res.data)
+          if (res.data.code === '0') {
+            this.$message.success('处置成功')
+            this.loading = false
+            this.dialogVisible = false
+            this.$emit('on-close')
+          } else {
+            this.dialogVisible = false
+            this.$message.error(res.data.msg)
+          }
+        })
+    },
+    // 文件上传
+    beforeUpload (file) {
+      // this.loading = true
+      const extension = file.name.split('.').slice(-1)[0]
+      // eslint-disable-next-line no-mixed-operators
+      if (extension !== 'docx' && extension !== 'doc' && extension !== 'jpg' && extension !== 'png' && extension !== 'xlsx' && extension !== 'xls') {
+        // this.loading = false
         this.$message({
           type: 'warning',
-          message: `不能输入以下字符: ${arr11.join(' ')}`
+          message: '上传文件格式出错，仅能支持jpg/png和docx/doc，xlsx/xls格式的文件上传'
         })
-        return
+        return false
       }
-      // if (this.textarea.length > 18) {
-      //   this.$message({
-      //     type: 'warning',
-      //     message: '字符长度不得超过18',
-      //   });
-      //   return;
-      // }
-      this.veList = resendParam.vehicles || this.vehicles
-      this.successArr = []
-      this.errorArr = []
-      this.paramsVeArr = []
-      this.loading = true
-      for (let i = 0; i < this.veList.length; i += 20) {
-        this.paramsVeArr.push(this.veList.slice(i, i + 20))
-      }
-      this.paramsVeArr.forEach(item => {
-        // eslint-disable-next-line no-unused-vars
-        const param = {
-          // vehicleIndexCodes: this.vehicleIndexCodes,
-          // vehicles: resendParam.vehicles || this.vehicles,
-          vehicles: item,
-          message: this.textarea,
-          onEmergent: this.emergencyChecked,
-          onTerminal: this.inCarChecked,
-          onTTS: this.TTSChecked,
-          onLED: this.outCarSelected,
-          needConfirm: 0,
-          userId: '',
-          broadcastType: this.form2.type,
-          broadcastRate: this.form2.frequency,
-          endTime: toTimezoneString(this.form2.endTime),
-          type: 1 // 0：点名，1：下发消息
-        }
-        this.$emit('update:buttonLoading', true)
-        if (resendParam.index) {
-          this.$set(this.tableData[resendParam.index], 'loading', true)
-        }
-        // this.dialogVisible = false;
-        this.countNum = 0
-        // batchBroadcast(param)
-        //   .then(json => {
-        //     if (json.code === '0') {
-        //       this.countNum++
-        //       if (json.data) {
-        //         if (json.data.filter(item => item.code === '0').length > 0) {
-        //           json.data
-        //             .filter(item => item.code === '0')
-        //             .forEach(item => {
-        //               this.successArr.push(item)
-        //             })
-        //         }
-        //         if (json.data.filter(item => item.code !== '0').length > 0) {
-        //           json.data
-        //             .filter(item => item.code !== '0')
-        //             .forEach(item => {
-        //               this.errorArr.push(item)
-        //             })
-        //         }
-        //         json.data.forEach(item => {
-        //           const index = this.tableData.findIndex(
-        //             vehicle => vehicle.plateNo === item.data
-        //           )
-        //           if (index > -1) {
-        //             this.$set(this.tableData[index], 'sendCode', item.code)
-        //             this.$set(
-        //               this.tableData[index],
-        //               'msg',
-        //               item.msg || (item.code === '0' ? '下发成功' : '下发失败')
-        //             )
-        //           }
-        //         })
-        //         // 下发消息成功以后，调用保存标签的接口，保存下发消息的标签，风险事件暂不处理
-        //         // 下发消息成功的车辆对应的报警就保存标签
-        //         if (
-        //           this.alarms &&
-        //           this.alarms.length > 0 &&
-        //           !this.alarms[0].isRiskEvent
-        //         ) {
-        //           const labels = []
-        //           const messageLabels = [
-        //             {
-        //               key: 'broadcast',
-        //               value: '2' // 1:系统自动处警 2:人工处警
-        //             },
-        //             {
-        //               key: 'message',
-        //               value: param.message
-        //             }
-        //           ]
-        //           this.successArr.forEach(successVehicle => {
-        //             this.alarms.forEach(alarm => {
-        //               if (alarm.vehicleLicensePlate === successVehicle.data) {
-        //                 labels.push({
-        //                   component: process.env.VUE_APP_COMPONENT_ID,
-        //                   beginTime: toTimezoneString(alarm.beginTime),
-        //                   eventId: alarm.eventId,
-        //                   labels: messageLabels
-        //                 })
-        //               }
-        //             })
-        //           })
-        //           if (labels.length > 0) {
-        //             batchSaveAlarmLabel(labels).then(json => {
-        //               if (json.code === '0') {
-        //                 messageLabels.push({
-        //                   key: 'dealPerson',
-        //                   value: this.$store.state.userInfo.userId
-        //                 })
-        //                 messageLabels.push({
-        //                   key: 'dealTime',
-        //                   value: toTimeNormalString(
-        //                     toTimezoneString(new Date().getTime())
-        //                   )
-        //                 })
-        //                 this.$emit('saveMessageLabelSuccess', {
-        //                   eventIds: labels.map(item => item.eventId),
-        //                   label: {
-        //                     component: process.env.VUE_APP_COMPONENT_ID,
-        //                     labels: messageLabels
-        //                   }
-        //                 })
-        //               }
-        //             })
-        //           }
-        //         }
-        //       } else {
-        //         this.$message.success('下发成功')
-        //         setTimeout(() => {
-        //           this.dialogVisible = false
-        //         }, 3000)
-        //         this.tableData.forEach((item, index) => {
-        //           this.$set(this.tableData[index], 'sendCode', '0')
-        //           this.$set(this.tableData[index], 'msg', '下发成功')
-        //         })
-        //       }
-        //       this.$emit('sendMessage')
-        //     } else {
-        //       this.$message.error('下发失败')
-        //       this.tableData.forEach((item, index) => {
-        //         this.$set(this.tableData[index], 'sendCode', '-1')
-        //         this.$set(this.tableData[index], 'msg', '下发失败')
-        //       })
-        //     }
-        //   })
-        //   .catch(e => {
-        //     this.tableData.forEach((item, index) => {
-        //       this.$set(this.tableData[index], 'sendCode', '-1')
-        //       this.$set(this.tableData[index], 'msg', '下发失败')
-        //     })
-        //   })
-        //   .finally(() => {
-        //     this.$emit('update:buttonLoading', false)
-        //   })
-      })
     },
-    insertPlateNo () {
-      this.textarea = '[车牌号]' + this.textarea
+    handleRemove (file, fileList) {
+      console.log(file, fileList)
+    },
+    handlePreview (file) {
+      console.log(file)
+    },
+    handleSuccess (response, file, fileList, xhr) {
+      console.log(file)
+      axios
+        .get('/alarmupload-web/feedback/getAttachmentFullUrl.do',{
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRF-TOKEN': getToken()
+          }
+        }).then(res => {
+          // console.log(res.data.data)
+          this.alarmHandleAttachment = res.data.data
+        })
     }
   }
 }
@@ -739,7 +450,7 @@ export default {
   font-size: 12px;
 }
 .message-head {
-  height: 28px;
+  line-height: 28px;
   position: relative;
   .el-button {
     position: absolute;
@@ -803,15 +514,24 @@ ul.template-word-content li i {
   line-height: 32px;
 }
 .sent-type {
-  height: 40px;
-  margin-top: 8px;
+  height: auto;
+  margin-top: 3px;
+  margin-bottom: 10px;
   display: flex;
+}
+.upload-demo {width: 100%}
+.el-upload--text {
+  float: left!important;
+  display: block;
+}
+ul.el-upload-list {
+  width: 250px!important;
 }
 .btn-wrap {
   text-align: right;
   padding: 11px 12px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
-  margin: 0 -12px;
+  border-top: 1px solid rgba(0, 0, 0, 0.12);
+  margin:0 -12px -12px -12px;
   background: #f5f5f5;
 }
 
@@ -878,7 +598,7 @@ ul.template-word-content li i {
   margin-left: 0px !important;
 }
 .location-wrap .el-dialog__body .el-dialog__body-wrapper {
-  padding: 0px !important;
+  padding-bottom: 0 !important;
 }
 .el-radio {
   max-width: 350px;

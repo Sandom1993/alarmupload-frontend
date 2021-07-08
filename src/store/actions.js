@@ -11,7 +11,8 @@ export default {
         '001': ['欢迎']
       },
       code: [
-        `${process.env.VUE_APP_CONTEXT}_001`
+        `${process.env.VUE_APP_CONTEXT}_001`,
+        `${process.env.VUE_APP_CONTEXT}_002`
       ]
     }
     // let { data } = await getUserInfo({ noMsg: true })
