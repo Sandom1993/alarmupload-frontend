@@ -6,6 +6,7 @@
     :visible.sync="dialogVisible"
     :modal="false"
     size="small"
+    @close="closeDialog"
   >
     <div class="dialog-content">
       <div class="message">
@@ -63,9 +64,10 @@
       <div class="message-head">上传附件：</div>
       <div class="sent-type">
         <el-upload
+          ref="uploadFile"
+          single-file
           class="upload-demo"
           action="/alarmupload-web/feedback/uploadAttachment.do"
-          :on-preview="handlePreview"
           :on-remove="handleRemove"
           :before-upload="beforeUpload"
           :on-success="handleSuccess"
@@ -106,7 +108,7 @@
       <el-button type="primary" @click="alarmHandle">
         确认
       </el-button>
-      <el-button @click="dialogVisible = false">
+      <el-button @click="closeDialog">
         取消
       </el-button>
     </div>
@@ -195,6 +197,10 @@ export default {
     openDialog () {
       this.dialogVisible = true
       this.getTemp()
+    },
+    closeDialog () {
+      this.dialogVisible = false
+      this.handleRemove()
     },
     // 获取模板文字
     getTemp () {
@@ -395,7 +401,7 @@ export default {
             'X-CSRF-TOKEN': getToken()
           }
         }).then(res => {
-          console.log(res.data)
+          // console.log(res.data)
           if (res.data.code === '0') {
             this.$message.success('处置成功')
             this.loading = false
@@ -409,36 +415,44 @@ export default {
     },
     // 文件上传
     beforeUpload (file) {
-      // this.loading = true
+      this.loading = true
       const extension = file.name.split('.').slice(-1)[0]
       // eslint-disable-next-line no-mixed-operators
-      if (extension !== 'docx' && extension !== 'doc' && extension !== 'jpg' && extension !== 'png' && extension !== 'xlsx' && extension !== 'xls') {
-        // this.loading = false
+      if (extension !== 'jpg' && extension !== 'png' && extension !== 'jpge') {
+        this.loading = false
         this.$message({
           type: 'warning',
-          message: '上传文件格式出错，仅能支持jpg/png和docx/doc，xlsx/xls格式的文件上传'
+          message: '上传文件格式出错，仅能支持jpg/png/jpge格式的文件上传'
         })
         return false
+      } else {
+        this.loading = false
       }
     },
     handleRemove (file, fileList) {
-      console.log(file, fileList)
+      this.$refs.uploadFile.clearFiles()
+      this.alarmHandleAttachment = ''
     },
-    handlePreview (file) {
-      console.log(file)
-    },
-    handleSuccess (response, file, fileList, xhr) {
-      console.log(file)
-      axios
-        .get('/alarmupload-web/feedback/getAttachmentFullUrl.do',{
-          headers: {
-            'X-Requested-With': 'XMLHttpRequest',
-            'X-CSRF-TOKEN': getToken()
-          }
-        }).then(res => {
-          // console.log(res.data.data)
+    // handlePreview (file) {
+    //   console.log(file)
+    // },
+    handleSuccess (res, file, fileList, xhr) {
+      if (res.code === '0') {
+
+        axios
+          .get('/alarmupload-web/feedback/getAttachmentFullUrl.do', {
+            headers: {
+              'X-Requested-With': 'XMLHttpRequest',
+              'X-CSRF-TOKEN': getToken()
+            }
+          }).then(res => {
           this.alarmHandleAttachment = res.data.data
+          this.$message.success("上传成功")
         })
+      } else {
+        this.$message.error("上传失败")
+      }
+      this.loading = false
     }
   }
 }
