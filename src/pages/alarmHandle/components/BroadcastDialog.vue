@@ -403,6 +403,7 @@ export default {
         }).then(res => {
           // console.log(res.data)
           if (res.data.code === '0') {
+
             this.$message.success('处置成功')
             this.loading = false
             this.dialogVisible = false
@@ -436,19 +437,11 @@ export default {
     // handlePreview (file) {
     //   console.log(file)
     // },
-    handleSuccess (res, file, fileList, xhr) {
+    handleSuccess (res) {
       if (res.code === '0') {
-
-        axios
-          .get('/alarmupload-web/feedback/getAttachmentFullUrl.do', {
-            headers: {
-              'X-Requested-With': 'XMLHttpRequest',
-              'X-CSRF-TOKEN': getToken()
-            }
-          }).then(res => {
-          this.alarmHandleAttachment = res.data.data
+        this.alarmHandleAttachment = res.data
+        console.log(this.alarmHandleAttachment)
           this.$message.success("上传成功")
-        })
       } else {
         this.$message.error("上传失败")
       }

@@ -280,7 +280,7 @@ export default {
   },
   methods: {
     getHandleCheck (row) {
-      return (new Date().getTime() - row.beginTime) > 7 * 24 * 60 * 60 * 1000
+      // return (new Date().getTime() - row.beginTime) > 7 * 24 * 60 * 60 * 1000
     },
     handleClose () {
       this.handleQuery()
