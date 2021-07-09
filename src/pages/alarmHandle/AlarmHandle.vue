@@ -148,7 +148,7 @@
                       <el-table-column prop="url" label="附件" width="80">
                         <template slot-scope="scope">
                           <el-button
-                            v-if="scope.row.url"
+                            v-if="scope.row.alarmHandleAttachment"
                             type="text"
                             size="mini"
                             style="color: #2196F3"
@@ -347,7 +347,16 @@ export default {
     },
     //  解析地理位置
     handleDownload (index, row) {
-      alert('暂无附件')
+      console.log(row)
+      if (row.alarmHandleAttachment !== '' || row.alarmHandleAttachment !== null) {
+        // 执行下载
+        window.location.href = row.alarmHandleAttachment
+      } else {
+        this.$message({
+          message: '无相关附件',
+          type: 'warning'
+        })
+      }
     },
     getAllAlarmTypes () {
       axios
