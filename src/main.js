@@ -1,5 +1,6 @@
 import Vue from 'vue'
 import hui from 'hui'
+import locale from 'hui/lib/locale/lang/zh-CN'
 import './huiPro' // equals to require('./huiPro')
 import initApp from './initApp'
 import '@hui/svg-icon/lib/svg-icon.css'
@@ -32,7 +33,9 @@ const getToken = () => {
   return token
 }
 
-Vue.use(hui)
+Vue.use(hui, {
+  locale
+})
 
 // 全局混合，对面包屑的多语言进行处理
 Vue.mixin({
