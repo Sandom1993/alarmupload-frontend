@@ -434,9 +434,6 @@ export default {
       this.$refs.uploadFile.clearFiles()
       this.alarmHandleAttachment = ''
     },
-    // handlePreview (file) {
-    //   console.log(file)
-    // },
     handleSuccess (res) {
       if (res.code === '0') {
         this.alarmHandleAttachment = res.data

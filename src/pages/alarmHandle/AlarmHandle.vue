@@ -280,7 +280,7 @@ export default {
   },
   methods: {
     getHandleCheck (row) {
-      return (new Date().getTime() - row.beginTime) > 7 * 24 * 60 * 60 * 1000
+      // return (new Date().getTime() - row.beginTime) > 7 * 24 * 60 * 60 * 1000
     },
     handleClose () {
       this.handleQuery()
@@ -318,10 +318,11 @@ export default {
         })
         .then(res => {
           this.loading = false
-          console.log('list', res.data.data)
+          // console.log('list', res.data.data)
           this.tableData = res.data.data.list
           this.total = res.data.data.total
         })
+      this.loading = false
     },
     // 重置查询条件
     handleReset () {
