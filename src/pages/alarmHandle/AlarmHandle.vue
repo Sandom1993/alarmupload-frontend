@@ -69,10 +69,11 @@
                 </div>
 
                 <div class="table-wrap">
+<!--        修改分页，前端分页          -->
                     <el-table
                         ref="tabref"
                         v-loading="loading"
-                        :data="tableData"
+                        :data="tableData.slice( (pageNo-1) * pageSize,pageNo * pageSize)"
                         stripe
                         :height="tableHeight - 166"
                         enable-virtual-scroll
@@ -189,16 +190,26 @@
                         </el-table-column>
                     </el-table>
                 </div>
+<!--              <el-pagination-->
+<!--                ref="pagination"-->
+<!--                :page-sizes="[30, 50, 100]"-->
+<!--                :page-size="pageSize"-->
+<!--                :current-page="pageNo"-->
+<!--                layout="total, sizes, prev, pager, next, jumper"-->
+<!--                :total="total"-->
+<!--                @size-change="onSizeChange"-->
+<!--                @current-change="onCurrentChange"-->
+<!--              ></el-pagination>-->
               <el-pagination
                 ref="pagination"
-                :page-sizes="[30, 50, 100]"
-                :page-size="pageSize"
+                @size-change="handleSizeChange"
+                @current-change="handleCurrentChange"
                 :current-page="pageNo"
+                :page-size="pageSize"
                 layout="total, sizes, prev, pager, next, jumper"
-                :total="total"
-                @size-change="onSizeChange"
-                @current-change="onCurrentChange"
-              ></el-pagination>
+                :total="tableData.length"
+              >
+              </el-pagination>
             </div>
         </h-layout>
       <BroadcastDialog :tempRow="tempRow" @on-close="handleClose"
@@ -216,12 +227,14 @@ import BroadcastDialog from '@/pages/alarmHandle/components/BroadcastDialog'
 import { getToken } from '@/utils/common'
 import alarmUtil from '@/utils/alarm'
 
-const now = new Date(new Date().getTime() - 6 * 24 * 60 * 60 * 1000)
+const now = new Date(new Date().getTime() - 2 * 24 * 60 * 60 * 1000)
 now.setHours(0)
 now.setMinutes(0)
 now.setSeconds(0)
 now.setMilliseconds(0)
-const endTime = now.getTime() + 6 * 24 * 60 * 60 * 1000 - 1
+const endTime = now.getTime() + 1 * 24 * 60 * 60 * 1000 - 1
+// update by chenying 2021.10.15
+// 修改查询时间默认为前天，不能超过24小时
 export default {
   name: 'AlarmHandle',
   // 注册组件
@@ -253,18 +266,18 @@ export default {
             return time.getTime() > endTime
           },
           customValidation (end, start) {
-            console.log((end.getTime() - start.getTime()) <= 31 * 24 * 60 * 60 * 1000)
-            console.log(start.getTime())
-            console.log(end.getTime())
+            // console.log((end.getTime() - start.getTime()) <= 31 * 24 * 60 * 60 * 1000)
+            // console.log(start.getTime())
+            // console.log(end.getTime())
 
-            return (end.getTime() - start.getTime()) <= 31 * 24 * 60 * 60 * 1000
+            return (end.getTime() - start.getTime()) <= 24 * 60 * 60 * 1000
           },
-          customPrompt: '选择时间范围不能超过31天'
+          customPrompt: '选择时间范围不能超过1天'
         }
       },
       pageSize: 30,
       pageNo: 1,
-      total: 0
+      // total: 0
     }
   },
   created () {
@@ -279,6 +292,13 @@ export default {
     window.removeEventListener('resize', this.resize)
   },
   methods: {
+    // 每页多少条
+    handleSizeChange(val) {
+      this.pageSize = val;
+    },
+    handleCurrentChange(val) {
+      this.pageNo = val;
+    },
     getHandleCheck (row) {
       // return (new Date().getTime() - row.beginTime) > 7 * 24 * 60 * 60 * 1000
     },
@@ -320,7 +340,7 @@ export default {
           this.loading = false
           // console.log('list', res.data.data)
           this.tableData = res.data.data.list
-          this.total = res.data.data.total
+          // this.total = res.data.data.total
         })
       this.loading = false
     },
