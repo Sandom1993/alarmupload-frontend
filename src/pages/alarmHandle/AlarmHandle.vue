@@ -71,13 +71,12 @@
                 <div class="table-wrap">
 <!--        修改分页，前端分页          -->
                     <el-table
-                        ref="tabref"
-                        v-loading="loading"
-                        :data="tableData.slice( (pageNo-1) * pageSize,pageNo * pageSize)"
+                        v-loading="tabloading"
                         stripe
                         :height="tableHeight - 166"
                         enable-virtual-scroll
                         force-scroll
+                        :data="tableData.slice( (pageNo-1) * pageSize,pageNo * pageSize)"
                     >
                         <!--  @current-change="handleCurrentChange"  -->
 <!--                        <el-table-column type="selection" :selectable="selectable"/>-->
@@ -248,7 +247,7 @@ export default {
       ALARM_TYPE,
       ALARM_LEVEL,
       tempRow: {},
-      loading: false,
+      tabloading: false,
       tableData: [],
       tableHeight: null,
       tableWidth: null,
@@ -307,7 +306,7 @@ export default {
     },
     // 查询列表
     handleQuery () {
-      this.loading = true
+      this.tabloading = true
       const {
         queryParams: {
           eventTypes, // 报警类型
@@ -337,12 +336,13 @@ export default {
           }
         })
         .then(res => {
-          this.loading = false
+          this.tabloading = false
           // console.log('list', res.data.data)
           this.tableData = res.data.data.list
           // this.total = res.data.data.total
-        })
-      this.loading = false
+        }).catch( () => {
+        this.tabloading = false
+      })
     },
     // 重置查询条件
     handleReset () {
